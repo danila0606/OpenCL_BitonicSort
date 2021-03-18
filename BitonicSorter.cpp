@@ -48,9 +48,7 @@ namespace BS {
 
 
         size_t global_size = data.size() / 2;
-        // This is the size of the work group.
         size_t local_size = std::min(global_size, work_group_size);
-        // Calculate the Number of work groups.
 
         auto start_t = std::chrono::system_clock::now();
 
