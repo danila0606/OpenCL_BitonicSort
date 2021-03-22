@@ -2,10 +2,15 @@
 #include <set>
 #include <random>
 
+
 //for reading testfile names
 #include <dirent.h>
 #include <sys/stat.h>
 std::vector<std::string> GetAllTestFileNames(const std::string& dirname);
+
+#include <filesystem>
+std::vector<std::string> GetAllTestFileNamesNew(const std::string& dirname);
+
 
 //info for generating tests
 struct TestGenInfo final {
@@ -18,7 +23,7 @@ void TestGenerator(const std::vector<TestGenInfo>& files);
 
 int main () {
 
-    auto filenames = GetAllTestFileNames("tests/");
+    auto filenames = GetAllTestFileNamesNew("tests");
 
     try {
         for (const auto& elem : filenames) {
@@ -77,6 +82,21 @@ int main () {
     TestGenerator({t1,t2,t3});*/
 
     return 0;
+}
+
+std::vector<std::string> GetAllTestFileNamesNew(const std::string& dirname) {
+
+    std::vector<std::string> filenames;
+
+    std::filesystem::directory_iterator p(dirname);
+
+    for (const auto & it : p) {
+        if (!std::filesystem::is_regular_file(it.status()))
+            continue;
+
+        filenames.push_back(it.path().string());
+    }
+    return filenames;
 }
 
 std::vector<std::string> GetAllTestFileNames(const std::string& dirname) {
