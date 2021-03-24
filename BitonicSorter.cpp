@@ -5,7 +5,6 @@
 namespace BS {
     BitonicSorter::BitonicSorter(const std::string &kernel_name) {
 
-
         // ChoosePlatformAndDevice();
         ChooseDefaultPlatformAndDevice();
 
@@ -15,19 +14,20 @@ namespace BS {
         queue_ = cl::CommandQueue(context_, device_);
 
         std::ifstream program_sources(kernel_name);
-        std::string program_string(std::istreambuf_iterator<char>(program_sources), (std::istreambuf_iterator<char>()));
+        std::istreambuf_iterator<char> start(program_sources), fin;
+        std::string program_string(start, fin);
         source_ = cl::Program::Sources(1, std::make_pair(program_string.c_str(), program_string.length() + 1));
 
         program_ = cl::Program(context_, source_);
-
         program_.build();
+
+        sort_fast = cl::Kernel(program_, "bitonic_sort_kernel_local");
+        sort_default = cl::Kernel(program_, "bitonic_sort_kernel_default");
     }
 
     long int BitonicSorter::Sort(std::vector<int> &data, Dir direction) {
 
         int dir = static_cast<int>(direction);
-
-        cl::Kernel sort = cl::Kernel(program_, "bitonic_sort_kernel_local");
 
         //preparing data
         size_t old_size = data.size();
@@ -46,11 +46,8 @@ namespace BS {
             data.push_back(pushing_num);
         //preparing data
 
-
         size_t global_size = data.size() / 2;
         size_t local_size = std::min(global_size, work_group_size);
-
-        auto start_t = std::chrono::system_clock::now();
 
         cl::Buffer buffer(context_, CL_MEM_READ_WRITE, sizeof(int) * data.size());
         queue_.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(int) * data.size(), data.data());
@@ -62,39 +59,32 @@ namespace BS {
         // After this we must use default kernel, without using local memory.
         cl::LocalSpaceArg local = cl::Local(2 * local_size * sizeof(int));
 
-        sort.setArg(0, buffer);
-        sort.setArg(1, local);
-        sort.setArg(2, localStages);
-        sort.setArg(3, dir);
+        auto start_t = std::chrono::system_clock::now();
+        sort_fast.setArg(0, buffer);
+        sort_fast.setArg(1, local);
+        sort_fast.setArg(2, localStages);
+        sort_fast.setArg(3, dir);
 
         cl::Event event;
-        queue_.enqueueNDRangeKernel(sort, 0, global_size, local_size, nullptr, &event);
+        queue_.enqueueNDRangeKernel(sort_fast, 0, global_size, local_size, nullptr, &event);
         event.wait();
 
-
-        sort = cl::Kernel(program_, "bitonic_sort_kernel_default");
-
         int curStage = localStages;
+        sort_default.setArg(0, buffer);
+        sort_default.setArg(3, dir);
         for (; curStage < numStages; ++curStage) {
-            sort.setArg(0, buffer);
-            sort.setArg(1, curStage);
-
+            sort_default.setArg(1, curStage);
+            cl::Event event1;
             // Every stage has stage + 1 passes
             for (int passOfStage = 0; passOfStage < curStage + 1; ++passOfStage) {
 
-                sort.setArg(2, passOfStage);
-                sort.setArg(3, dir);
-
+                sort_default.setArg(2, passOfStage);
                 // Enqueue a kernel run call.
                 // Each thread writes a sorted pair.
                 // So, the number of threads (global) should be half the length of the input buffer.
-
-                cl::Event event1;
-                queue_.enqueueNDRangeKernel(sort, cl::NullRange, global_size, local_size, nullptr, &event1);
-                event1.wait();
-
-                queue_.finish();
+                queue_.enqueueNDRangeKernel(sort_default, cl::NullRange, global_size, local_size, nullptr, &event1);
             }
+            event1.wait();
         }
 
         queue_.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(int) * data.size(), data.data());

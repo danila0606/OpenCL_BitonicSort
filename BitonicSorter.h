@@ -30,6 +30,8 @@ namespace BS {
         cl::Program::Sources source_;
         cl::CommandQueue queue_;
         cl::Program program_;
+        cl::Kernel sort_fast;
+        cl::Kernel sort_default;
 
     private:
         size_t work_group_size = 0;
