@@ -33,12 +33,14 @@ namespace BS {
         cl::Kernel sort_fast;
         cl::Kernel sort_default;
 
+        const std::string kernel_name_;
+
     private:
         size_t work_group_size = 0;
 
     public:
 
-        explicit BitonicSorter(const std::string &kernel_name);
+        explicit BitonicSorter(const std::string& kernel_name = "sort_kernel.cl");
 
         long int Sort(std::vector<int> &data, Dir direction = Dir::Increase); //returns time spent on sorting
 

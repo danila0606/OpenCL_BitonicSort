@@ -80,6 +80,7 @@ int main () {
     TestGenInfo t2 = {"tests/test2.txt", 10000, -30000, 30000, BS::Dir::Increase};
     TestGenInfo t3 = {"tests/test3.txt", 20000, 0, 100000, BS::Dir::Decrease};
     TestGenerator({t1,t2,t3});*/
+    //TestGenInfo t5 = {"tests/test5.txt", 1000000, -300000, 300000, BS::Dir::Increase};
 
     return 0;
 }

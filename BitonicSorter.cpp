@@ -3,7 +3,7 @@
 #include <cmath>
 
 namespace BS {
-    BitonicSorter::BitonicSorter(const std::string &kernel_name) {
+    BitonicSorter::BitonicSorter(const std::string &kernel_name): kernel_name_(kernel_name) {
 
         // ChoosePlatformAndDevice();
         ChooseDefaultPlatformAndDevice();
@@ -13,7 +13,7 @@ namespace BS {
         context_ = cl::Context({device_});
         queue_ = cl::CommandQueue(context_, device_);
 
-        std::ifstream program_sources(kernel_name);
+        std::ifstream program_sources(kernel_name_);
         std::istreambuf_iterator<char> start(program_sources), fin;
         std::string program_string(start, fin);
         source_ = cl::Program::Sources(1, std::make_pair(program_string.c_str(), program_string.length() + 1));
@@ -27,16 +27,12 @@ namespace BS {
 
     long int BitonicSorter::Sort(std::vector<int> &data, Dir direction) {
 
-        int dir = static_cast<int>(direction);
-
         //preparing data
         size_t old_size = data.size();
-        size_t new_size = 1;
-        while (new_size < old_size)
-            new_size *= 2;
+        size_t new_size = std::pow(2,1 + static_cast<int>(log2(old_size)));
 
         int pushing_num = 0;
-        if (dir)
+        if (direction == Dir::Increase)
             pushing_num = std::numeric_limits<int>::max();
         else
             pushing_num = std::numeric_limits<int>::min();
@@ -63,7 +59,7 @@ namespace BS {
         sort_fast.setArg(0, buffer);
         sort_fast.setArg(1, local);
         sort_fast.setArg(2, localStages);
-        sort_fast.setArg(3, dir);
+        sort_fast.setArg(3, direction);
 
         cl::Event event;
         queue_.enqueueNDRangeKernel(sort_fast, 0, global_size, local_size, nullptr, &event);
@@ -71,7 +67,7 @@ namespace BS {
 
         int curStage = localStages;
         sort_default.setArg(0, buffer);
-        sort_default.setArg(3, dir);
+        sort_default.setArg(3, direction);
         for (; curStage < numStages; ++curStage) {
             sort_default.setArg(1, curStage);
             cl::Event event1;

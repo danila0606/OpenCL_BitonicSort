@@ -3,24 +3,27 @@
 
 int main(int argc, char* argv[]) {
 
-    std::ifstream in{argv[1]};
+    std::istream& in = std::cin;
+    /*std::ifstream in{"tests/test1.txt"};
     if (!in.is_open()) {
         std::cerr << "Cant open file!" << std::endl;
         exit(0);
-    }
+    }*/
 
     int n;
     in >> n;
     std::vector<int> data(n);
     for (int i = 0; i < n; i++) {
-        int num = 0;
-        in >> num;
-        data.push_back(num);
+        if (!in.good()) {
+            std::cout<<"Problems with cin!"<<std::endl;
+            exit(0);
+        }
+        in >> data[i];
     }
 
     try {
 
-        BS::BitonicSorter bs("sort_kernel.cl");
+        BS::BitonicSorter bs;
         bs.Sort(data, BS::Dir::Increase);
 
         for (int i = 0; i < n; i++)
@@ -34,5 +37,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-
-
